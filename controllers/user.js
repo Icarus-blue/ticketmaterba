@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const ErrorResponse = require("../utils/errorResponse");
+// const { login } = require("telegraf/typings/button");
 
 
 exports.updateUser = async (req, res, next) => {
@@ -52,9 +53,34 @@ exports.getUser = async (req, res, next) => {
   }
 };
 
+exports.updatePassword = async (req, res, next) => {
+  try {
+    const { current_password, new_password } = req.body;
+
+    const user = await User.findOne({ _id: req.user._id })
+    .select("+password");
+    
+    if (!user) {
+      return next(new ErrorResponse("User not found", 404));
+    }
+
+    const isMatch = await user.matchPassword(current_password);
+    if (!isMatch) {
+      return next(new ErrorResponse("Invalid credentials", 401));
+    }
+
+    user.password = new_password;
+    await user.save();
+
+    res.status(200).json({ success: true, user: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.deleteAcc = async (req, res, next) => {
   try {
-    const userIds = req.params.ids;  
+    const userIds = req.params.ids;
     User.deleteMany({ _id: { $in: userIds } })
       .then(() => {
         res.status(200).json({ message: 'User(s) deleted successfully' });

@@ -22,7 +22,7 @@ exports.login = async (req, res, next) => {
 
     if (!user) {
       return next(new ErrorResponse("Invalid credentials", 401));
-    }
+    }   
 
     // In active account
     if (!user.isActive) {
@@ -36,7 +36,6 @@ exports.login = async (req, res, next) => {
 
     // Check that password match
     const isMatch = await user.matchPassword(password);
-
     if (!isMatch) {
       return next(new ErrorResponse("Invalid credentials", 401));
     }
@@ -105,6 +104,7 @@ exports.register = async (req, res, next) => {
     next(err);
   }
 };
+
 exports.registerGoogle = async (req, res, next) => {
   try {
     const user = await User.create(req.body);

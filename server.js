@@ -6,7 +6,7 @@ const errorHandler = require("./middleware/error");
 const session = require("express-session");
 const connectDB = require("./config/db");
 const axios = require('axios')
-const { Telegraf } = require('telegraf')
+const { Telegraf, Markup } = require('telegraf')
 const dotenv = require('dotenv')
 const cheerio = require('cheerio');
 
@@ -75,14 +75,6 @@ bot.command('start', async context => {
   }
 })
 
-
-
-// bot.start((ctx) => {
-//   const userId = ctx.message.from.id;
-//   console.log(userId); 
-//   ctx.reply(`Your unique ID is: ${userId}`);
-// });
-
 bot.launch()
 
 app.get('/watch', protect, async (req, res, next) => {
@@ -106,7 +98,7 @@ app.get('/watch', protect, async (req, res, next) => {
     } else {
       return res.status(200).json({
         status: false,
-        message: "Resale link is not supported now, please try other link", 
+        message: "Resale link is not supported now, please try other link",
       })
     }
   }
@@ -141,7 +133,9 @@ const watchEvent = async (eventUrl, user) => {
       const eventArray = eventNameElement.map((index, element) => $(element).text().trim()).get();
 
       const toSend = `Ticket available for ${eventUrl}: \n\n\t\t Date to Open: ${eventArray[1]} \n\n\t\t sits: 'not prepared yet.'`
+     
       bot.telegram.sendMessage(user.chatId, toSend)
+
       return {
         status: 0,
         savedata: {
@@ -169,3 +163,9 @@ const htmlStringPaser = async (str) => {
 }
 
 module.exports = { watchEvent }
+
+// bot.start((ctx) => {
+//   const userId = ctx.message.from.id;
+//   console.log(userId);
+//   ctx.reply(`Your unique ID is: ${userId}`);
+// });
