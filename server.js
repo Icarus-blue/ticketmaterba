@@ -86,67 +86,80 @@ app.get('/watch', protect, async (req, res, next) => {
     })
   }
 
-  const result = await watchEvent(url, req.user)
+  const result = await watchEvent(url, req.user) 
   if (result) {
-    if (result.status == 0) {
-      let newEvent = await new EventModel(result.savedata).save()
-      return res.status(200).json({
-        status: true,
-        message: "Event watched! A message was sent to you through the bot.",
-        html: result.html
-      })
-    } else {
-      return res.status(200).json({
-        status: false,
-        message: "Resale link is not supported now, please try other link",
-      })
+    //result : all event info is stored in result variable
+
+    let eventInfoToSave = {
+      name : result.name,
+      date : result.dates.start.dateTime,
+      timezone : result.dates.timezone,
+      url : url,
+      place : result._embedded.venues[0].name,
+      user : req.user._id,
+      eventId : result.id
     }
+   
+    let newEvent = await new EventModel(eventInfoToSave).save()
+
+    const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.dates.start.dateTime} at ${result.dates.timezone}\n\n\t\t sales:\n\n\t\t\t\t Public :\n\n\t\t\t\t  Date to Open : ${result?.sales?.public?.startDateTime}\n\n\t\t\t\t  Date to End :  ${result?.sales?.public?.endDateTime} 
+    \n\n\t\t\t\t  presales: ${result?.sales?.presales.length} types of presale available `
+
+    let imgurl = result?.seatmap?.staticUrl;
+
+    bot.telegram.sendMessage(req.user.chatId,toSend)
+    bot.telegram.sendMessage(req.user.chatId,imgurl,{toSend})
+
+    return res.status(200).json({
+          status: true,
+          message: "Event watched! A message was sent to you through the bot.",  
+        })   
   }
+
   return res.status(500).json({
     status: false,
     message: "An error occured. Check the url or try again"
   })
+  
 })
 
 const watchEvent = async (eventUrl, user) => {
-  try {
-    var formData = new FormData();
-    formData.append('eventurl', eventUrl);
-    formData.append('responsive', '1');
-    formData.append('frompage', 'events');
-
-    const res = await axios.post('https://www.droppedtickets.com/events/newevent', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Cookie': '_ga=GA1.2.2091108946.1704484115; _gid=GA1.2.1008499319.1705009841; _csrf-frontend=0e0cb5a4b6a36e912416c08edf83ed8fb17e492479c1bbc73fb570b0483fa6eea%3A2%3A%7Bi%3A0%3Bs%3A14%3A%22_csrf-frontend%22%3Bi%3A1%3Bs%3A32%3A%22PDf4_7iuPFOSuhiGK-vIitcy-UoMS4em%22%3B%7D; FRONTENDSESSID2=494i5lr0ccfo2fpck0pgsv9rj6; _frontendIdentity2=269fe7bd13a915d844ed208fb127bb1ba7a2a90964172a22555e1232361acbbea%3A2%3A%7Bi%3A0%3Bs%3A18%3A%22_frontendIdentity2%22%3Bi%3A1%3Bs%3A49%3A%22%5B1795%2C%22uphMOpS452a8OipVTIa6OlhqvgxOeIBd%22%2C1209600%5D%22%3B%7D; _gat=1; _ga_079MQD69LK=GS1.2.1705241180.23.0.1705241180.0.0.0',
-        'X-Csrf-Token': 'dVY0dXNEejglElJBLHMTTSUQeyYGLBN/PntCPBowGUFYA1s4IHAfVQ=='
-      },
-    })
-    let html = res.data;
-    if (html[0] != '<') {
-      return {
-        status: 1,
+  try {    
+    var eventurlarr = eventUrl.split('/');
+    var domain = eventurlarr[2].split('.').at(-1);    
+    
+    if(domain=='ie'){
+      let keywordarr = eventurlarr[3].split('-');                
+      let keyword = keywordarr.slice(0, 4).join(' ');
+ 
+      const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+      const data = await res.data; 
+       
+      if(!data._embedded) {
+        let keyword = keywordarr.slice(0, 3).join(' ');
+        const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+        const data = await res.data; 
+        if(!data._embedded){
+          let keyword = keywordarr.slice(0, 2).join(' ');
+          const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+          const data = await res.data; 
+          let eventdataarr = data._embedded.events;
+          let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+          return filteredarr[0];
+        }else {
+          let eventdataarr = data._embedded.events;
+          let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+          return filteredarr[0];
+        }
+      }else {        
+        let eventdataarr = data._embedded.events;
+        let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+        return filteredarr[0];
       }
-    } else {
-      const $ = cheerio.load(html);
-      const eventNameElement = $('.col-lg-9');
-      const eventArray = eventNameElement.map((index, element) => $(element).text().trim()).get();
-
-      const toSend = `Ticket available for ${eventUrl}: \n\n\t\t Date to Open: ${eventArray[1]} \n\n\t\t sits: 'not prepared yet.'`
-     
-      bot.telegram.sendMessage(user.chatId, toSend)
-
-      return {
-        status: 0,
-        savedata: {
-          name: eventArray[0],
-          date: eventArray[1],
-          url: eventUrl,
-          place: eventArray[2],
-          user: user._id,
-        },
-      }
+    }else if(domain=='uk'){
+      
     }
+   
   } catch (err) {
     console.log('error scraping: ', err.message)
     return false
@@ -156,11 +169,6 @@ const watchEvent = async (eventUrl, user) => {
 
 }
 
-const htmlStringPaser = async (str) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(str, "text/html");
-  return doc;
-}
 
 module.exports = { watchEvent }
 
@@ -169,3 +177,4 @@ module.exports = { watchEvent }
 //   console.log(userId);
 //   ctx.reply(`Your unique ID is: ${userId}`);
 // });
+
