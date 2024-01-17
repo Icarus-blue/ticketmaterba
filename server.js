@@ -6,7 +6,7 @@ const errorHandler = require("./middleware/error");
 const session = require("express-session");
 const connectDB = require("./config/db");
 const axios = require('axios')
-const { Telegraf, Markup } = require('telegraf')
+const { Telegraf } = require('telegraf')
 const dotenv = require('dotenv')
 const cheerio = require('cheerio');
 const request = require("request");
@@ -159,7 +159,7 @@ const watchEvent = async (eventUrl, user) => {
         const staticMaplink = eventInfo.venue.staticMap;
 
         const secnames = eventInfo.secnames;
-        const prices = jsonData.props.pageProps.initialReduxState.ticketSelection.ticketTypes.prices;
+        const prices = jsonData.props.pageProps.initialReduxState.ticketSelection.ticketTypes[0].prices;
 
         const result = {
           discoEventId  : discoEventId,
