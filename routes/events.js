@@ -7,7 +7,7 @@ const router = express.Router()
 
 
 router.get('/events', protect, async (req, res, next) => {
-    try {
+    try {        
         const events = await EventModel.find({ user: req.user._id })
         res.status(200).json(events)
     } catch (err) {
@@ -15,6 +15,7 @@ router.get('/events', protect, async (req, res, next) => {
         res.status(500).json({ message: "failed. Try again" })
     }
 })
+
 async function getDocumentsAddedThreeDaysAgo() {
     try {
         const threeDaysAgo = new Date();

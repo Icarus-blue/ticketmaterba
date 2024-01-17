@@ -9,6 +9,8 @@ const axios = require('axios')
 const { Telegraf, Markup } = require('telegraf')
 const dotenv = require('dotenv')
 const cheerio = require('cheerio');
+const request = require("request");
+const fs = require('fs');
 
 const {
   app, serve, io
@@ -87,28 +89,34 @@ app.get('/watch', protect, async (req, res, next) => {
   }
 
   const result = await watchEvent(url, req.user) 
+  console.log(result);
   if (result) {
-    //result : all event info is stored in result variable
 
     let eventInfoToSave = {
-      name : result.name,
-      date : result.dates.start.dateTime,
-      timezone : result.dates.timezone,
+      name : result.eventName,
+      date : result.eventDate,   
       url : url,
-      place : result._embedded.venues[0].name,
+      place : result.eventPlace,
+      eventId : result.discoEventId,
       user : req.user._id,
-      eventId : result.id
+      secnames : result.secnames,
+      prices : result.prices,
+      staticMaplink : result.staticMaplink,
+      eventStreetAddress : result.eventStreetAddress,
+      eventCity : result.eventCity,
+      eventStartDate : result.eventStartDate,
+      endDate : result.endDate,
+      onsaleDate : result.onsaleDate,
+      offsaleDate : result.offsaleDate,
+      presaleDates : result.presaleDates,      
     }
    
-    let newEvent = await new EventModel(eventInfoToSave).save()
+    await new EventModel(eventInfoToSave).save()
 
-    const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.dates.start.dateTime} at ${result.dates.timezone}\n\n\t\t sales:\n\n\t\t\t\t Public :\n\n\t\t\t\t  Date to Open : ${result?.sales?.public?.startDateTime}\n\n\t\t\t\t  Date to End :  ${result?.sales?.public?.endDateTime} 
-    \n\n\t\t\t\t  presales: ${result?.sales?.presales.length} types of presale available `
-
-    let imgurl = result?.seatmap?.staticUrl;
+    const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.eventDate} \n\n\t\t sales:\n\n\t\t\t\t`
 
     bot.telegram.sendMessage(req.user.chatId,toSend)
-    bot.telegram.sendMessage(req.user.chatId,imgurl,{toSend})
+
 
     return res.status(200).json({
           status: true,
@@ -120,45 +128,60 @@ app.get('/watch', protect, async (req, res, next) => {
     status: false,
     message: "An error occured. Check the url or try again"
   })
-  
+
 })
 
 const watchEvent = async (eventUrl, user) => {
   try {    
-    var eventurlarr = eventUrl.split('/');
-    var domain = eventurlarr[2].split('.').at(-1);    
-    
-    if(domain=='ie'){
-      let keywordarr = eventurlarr[3].split('-');                
-      let keyword = keywordarr.slice(0, 4).join(' ');
- 
-      const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-      const data = await res.data; 
-       
-      if(!data._embedded) {
-        let keyword = keywordarr.slice(0, 3).join(' ');
-        const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-        const data = await res.data; 
-        if(!data._embedded){
-          let keyword = keywordarr.slice(0, 2).join(' ');
-          const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-          const data = await res.data; 
-          let eventdataarr = data._embedded.events;
-          let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-          return filteredarr[0];
-        }else {
-          let eventdataarr = data._embedded.events;
-          let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-          return filteredarr[0];
+    console.log(eventUrl);
+    request(eventUrl, function (error, response, html) {
+      if (!error && response.statusCode == 200) {
+
+        const $ = cheerio.load(html);
+        const scriptContent = $('#__NEXT_DATA__').html();
+        const jsonData = JSON.parse(scriptContent);
+
+        const eventInfo = jsonData.props.pageProps.initialReduxState.eventInfo;
+        const discoEventId = eventInfo.discoEventId;
+        const countryCode = eventInfo.venue.country;
+        const eventName = eventInfo.name;
+        const eventPlace = eventInfo.venue.name;
+
+        const eventDate = eventInfo.dates.eventDate;
+        const eventStartDate = eventInfo.dates.startDate;
+        const endDate = eventInfo.dates.endDate;
+        const onsaleDate = eventInfo.dates.onsaleDate;
+        const offsaleDate = eventInfo.dates.offsaleDate;
+        const presaleDates = eventInfo.dates.presaleDates;
+
+        const eventCity =  eventInfo.venue.city;
+        const eventStreetAddress = eventInfo.venue.streetAddress;
+        const staticMaplink = eventInfo.venue.staticMap;
+
+        const secnames = eventInfo.secnames;
+        const prices = jsonData.props.pageProps.initialReduxState.ticketSelection.ticketTypes.prices;
+
+        const result = {
+          discoEventId  : discoEventId,
+          countryCode :  countryCode,
+          eventName :  eventName,
+          eventPlace :  eventPlace,
+          eventDate : eventDate,
+          eventStartDate : eventStartDate,
+          endDate : endDate,
+          onsaleDate :  onsaleDate,
+          offsaleDate : offsaleDate,
+          presaleDates : presaleDates,
+          eventCity : eventCity,
+          eventStreetAddress : eventStreetAddress,
+          staticMaplink : staticMaplink,
+          secnames : secnames,
+          prices : prices
         }
-      }else {        
-        let eventdataarr = data._embedded.events;
-        let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-        return filteredarr[0];
+
+        return result
       }
-    }else if(domain=='uk'){
-      
-    }
+  });
    
   } catch (err) {
     console.log('error scraping: ', err.message)
@@ -172,9 +195,71 @@ const watchEvent = async (eventUrl, user) => {
 
 module.exports = { watchEvent }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // bot.start((ctx) => {
 //   const userId = ctx.message.from.id;
 //   console.log(userId);
 //   ctx.reply(`Your unique ID is: ${userId}`);
 // });
 
+
+// const watchEvent = async (eventUrl, user) => {
+//   try {    
+//     var eventurlarr = eventUrl.split('/');
+//     var domain = eventurlarr[2].split('.').at(-1);    
+    
+//     if(domain=='ie'){
+//       let keywordarr = eventurlarr[3].split('-');                
+//       let keyword = keywordarr.slice(0, 4).join(' ');
+ 
+//       const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+//       const data = await res.data; 
+       
+//       if(!data._embedded) {
+//         let keyword = keywordarr.slice(0, 3).join(' ');
+//         const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+//         const data = await res.data; 
+//         if(!data._embedded){
+//           let keyword = keywordarr.slice(0, 2).join(' ');
+//           const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
+//           const data = await res.data; 
+//           let eventdataarr = data._embedded.events;
+//           let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+//           return filteredarr[0];
+//         }else {
+//           let eventdataarr = data._embedded.events;
+//           let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+//           return filteredarr[0];
+//         }
+//       }else {        
+//         let eventdataarr = data._embedded.events;
+//         let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
+//         return filteredarr[0];
+//       }
+//     }else if(domain=='uk'){
+      
+//     }
+   
+//   } catch (err) {
+//     console.log('error scraping: ', err.message)
+//     return false
+//   } finally {
+
+//   }
+
+// }
