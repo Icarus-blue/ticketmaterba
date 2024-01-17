@@ -88,101 +88,116 @@ app.get('/watch', protect, async (req, res, next) => {
     })
   }
 
-  const result = await watchEvent(url, req.user) 
-  console.log(result);
-  if (result) {
+  const formData = {
+    eventurl: url,
+    responsive: 1,
+    frompage: 'events',
+  };
 
-    let eventInfoToSave = {
-      name : result.eventName,
-      date : result.eventDate,   
-      url : url,
-      place : result.eventPlace,
-      eventId : result.discoEventId,
-      user : req.user._id,
-      secnames : result.secnames,
-      prices : result.prices,
-      staticMaplink : result.staticMaplink,
-      eventStreetAddress : result.eventStreetAddress,
-      eventCity : result.eventCity,
-      eventStartDate : result.eventStartDate,
-      endDate : result.endDate,
-      onsaleDate : result.onsaleDate,
-      offsaleDate : result.offsaleDate,
-      presaleDates : result.presaleDates,      
-    }
-   
-    await new EventModel(eventInfoToSave).save()
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'Cookie': '_ga=GA1.2.2091108946.1704484115; _gid=GA1.2.1008499319.1705009841; _csrf-frontend=0e0cb5a4b6a36e912416c08edf83ed8fb17e492479c1bbc73fb570b0483fa6eea%3A2%3A%7Bi%3A0%3Bs%3A14%3A%22_csrf-frontend%22%3Bi%3A1%3Bs%3A32%3A%22PDf4_7iuPFOSuhiGK-vIitcy-UoMS4em%22%3B%7D; _frontendIdentity2=269fe7bd13a915d844ed208fb127bb1ba7a2a90964172a22555e1232361acbbea%3A2%3A%7Bi%3A0%3Bs%3A18%3A%22_frontendIdentity2%22%3Bi%3A1%3Bs%3A49%3A%22%5B1795%2C%22uphMOpS452a8OipVTIa6OlhqvgxOeIBd%22%2C1209600%5D%22%3B%7D; FRONTENDSESSID2=6natvtuk8b0t6h98uq0sta4a35; _ga_079MQD69LK=GS1.2.1705506795.32.0.1705506795.0.0.0',
+    'X-Csrf-Token': 'Wm1kVUlLaWIKKQJhFnwAFworKwY8IwAlEUASHCA/Cht3OAsYGn8MDw=='
 
-    const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.eventDate} \n\n\t\t sales:\n\n\t\t\t\t`
+  };
 
-    bot.telegram.sendMessage(req.user.chatId,toSend)
+  await axios.post('https://www.droppedtickets.com/events/newevent', formData, { headers })
+    .then(response => {
+      const $ = cheerio.load(response.data);
 
+      const firstRow = $('.container .row').first();
+      const secondRow = $('.container .row').eq(1);
+      const thirdRow = $('.container .row').eq(2);
+      const eventName = firstRow.find('.col-lg-9').text().trim();
+      const eventDate = secondRow.find('.col-lg-9').text().trim();
+      const eventPlace = thirdRow.find('.col-lg-9').text().trim();
 
-    return res.status(200).json({
+      const form = $('#followForm');
+
+      const firstRow_Form = form.find('.row').first();
+      const firstselect = firstRow_Form.find('select');
+      const ticketTypeArr = firstselect
+        .children()
+        .map((_, option) => $(option).text())
+        .get();
+
+      const secondRow_Form = form.find('.row').eq(1);
+      const secondselect = secondRow_Form.find('select');
+      const blockedTypeArr = secondselect
+        .children()
+        .map((_, option) => $(option).text())
+        .get();
+
+      const thirdRow_Form = form.find('.row').eq(3);
+      const thirdselect = thirdRow_Form.find('select');
+      const sectionArr = thirdselect
+        .children()
+        .map((_, option) => $(option).text())
+        .get();
+
+      const fourthRow_Form = form.find('.row').eq(4);
+      const fourthselect = fourthRow_Form.find('select');
+      const priceArr = fourthselect
+        .children()
+        .map((_, option) => $(option).text())
+        .get();
+
+      const result = {
+        eventName: eventName,
+        eventDate: eventDate,
+        eventPlace: eventPlace,
+        ticketTypeArr: ticketTypeArr,
+        blockedTypeArr: blockedTypeArr,
+        sectionArr: sectionArr,
+        priceArr: priceArr
+      }
+
+      if (result) {
+
+        const eventInfoToSave = {
+          name: result.eventName,
+          date: result.eventDate,
+          url: url,
+          place: result.eventPlace,
+          user: req.user._id,
+          ticketTypeArr: result.ticketTypeArr,
+          blockedTypeArr: result.blockedTypeArr,
+          sectionArr: result.sectionArr,
+          priceArr: result.priceArr
+        }
+
+        new EventModel(eventInfoToSave).save()
+
+        const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.eventDate} \n\n\t\t sales:\n\n\t\t\t\t`
+
+        bot.telegram.sendMessage(req.user.chatId, toSend)
+
+        return res.status(200).json({
           status: true,
-          message: "Event watched! A message was sent to you through the bot.",  
-        })   
-  }
+          message: "Event watched! A message was sent to you through the bot.",
+        })
+      }
 
-  return res.status(500).json({
-    status: false,
-    message: "An error occured. Check the url or try again"
-  })
+      return res.status(500).json({
+        status: false,
+        message: "An error occured. Check the url or try again"
+      })
+    })
+    .catch(error => {
+      console.error(error);
+    });
+
+
+  // const result = await  watchEvent(url, req.user) 
+
+
 
 })
 
 const watchEvent = async (eventUrl, user) => {
-  try {    
-    console.log(eventUrl);
-    request(eventUrl, function (error, response, html) {
-      if (!error && response.statusCode == 200) {
+  try {
 
-        const $ = cheerio.load(html);
-        const scriptContent = $('#__NEXT_DATA__').html();
-        const jsonData = JSON.parse(scriptContent);
 
-        const eventInfo = jsonData.props.pageProps.initialReduxState.eventInfo;
-        const discoEventId = eventInfo.discoEventId;
-        const countryCode = eventInfo.venue.country;
-        const eventName = eventInfo.name;
-        const eventPlace = eventInfo.venue.name;
-
-        const eventDate = eventInfo.dates.eventDate;
-        const eventStartDate = eventInfo.dates.startDate;
-        const endDate = eventInfo.dates.endDate;
-        const onsaleDate = eventInfo.dates.onsaleDate;
-        const offsaleDate = eventInfo.dates.offsaleDate;
-        const presaleDates = eventInfo.dates.presaleDates;
-
-        const eventCity =  eventInfo.venue.city;
-        const eventStreetAddress = eventInfo.venue.streetAddress;
-        const staticMaplink = eventInfo.venue.staticMap;
-
-        const secnames = eventInfo.secnames;
-        const prices = jsonData.props.pageProps.initialReduxState.ticketSelection.ticketTypes[0].prices;
-
-        const result = {
-          discoEventId  : discoEventId,
-          countryCode :  countryCode,
-          eventName :  eventName,
-          eventPlace :  eventPlace,
-          eventDate : eventDate,
-          eventStartDate : eventStartDate,
-          endDate : endDate,
-          onsaleDate :  onsaleDate,
-          offsaleDate : offsaleDate,
-          presaleDates : presaleDates,
-          eventCity : eventCity,
-          eventStreetAddress : eventStreetAddress,
-          staticMaplink : staticMaplink,
-          secnames : secnames,
-          prices : prices
-        }
-
-        return result
-      }
-  });
-   
   } catch (err) {
     console.log('error scraping: ', err.message)
     return false
@@ -209,57 +224,3 @@ module.exports = { watchEvent }
 
 
 
-
-
-// bot.start((ctx) => {
-//   const userId = ctx.message.from.id;
-//   console.log(userId);
-//   ctx.reply(`Your unique ID is: ${userId}`);
-// });
-
-
-// const watchEvent = async (eventUrl, user) => {
-//   try {    
-//     var eventurlarr = eventUrl.split('/');
-//     var domain = eventurlarr[2].split('.').at(-1);    
-    
-//     if(domain=='ie'){
-//       let keywordarr = eventurlarr[3].split('-');                
-//       let keyword = keywordarr.slice(0, 4).join(' ');
- 
-//       const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-//       const data = await res.data; 
-       
-//       if(!data._embedded) {
-//         let keyword = keywordarr.slice(0, 3).join(' ');
-//         const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-//         const data = await res.data; 
-//         if(!data._embedded){
-//           let keyword = keywordarr.slice(0, 2).join(' ');
-//           const res = await axios.get(`https://app.ticketmaster.com/discovery/v2/events?keyword=${keyword}&countryCode=IE&apikey=EZ6bALdFYeGViAbL5HvHYx7hEEnAZpdf`);    
-//           const data = await res.data; 
-//           let eventdataarr = data._embedded.events;
-//           let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-//           return filteredarr[0];
-//         }else {
-//           let eventdataarr = data._embedded.events;
-//           let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-//           return filteredarr[0];
-//         }
-//       }else {        
-//         let eventdataarr = data._embedded.events;
-//         let filteredarr = eventdataarr.filter(item=>item.url==eventUrl);
-//         return filteredarr[0];
-//       }
-//     }else if(domain=='uk'){
-      
-//     }
-   
-//   } catch (err) {
-//     console.log('error scraping: ', err.message)
-//     return false
-//   } finally {
-
-//   }
-
-// }
