@@ -4,7 +4,7 @@ const { protect } = require('../middleware/auth')
 const EventModel = require('../models/Events')
 const LiveDropModel = require('../models/LiveDrop')
 const router = express.Router()
-
+const jwt = require("jsonwebtoken");
 
 router.get('/events', protect, async (req, res, next) => {
     try {
@@ -37,7 +37,7 @@ async function getDocumentsAddedThreeDaysAgo(userid) {
 router.get("/live-drops", async (req, res, next) => {
     try {
         let token = req.headers.authorization.split(" ")[1];
-        const tokenUser = jwt.verify(token, process.env.ACCESS_SECRET);        
+        const tokenUser = jwt.verify(token, process.env.ACCESS_SECRET);    
         const liveDrops = await getDocumentsAddedThreeDaysAgo(tokenUser._id)
         if (!liveDrops) throw new Error()
         res.status(200).json({ status: true, liveDrops })
