@@ -9,8 +9,7 @@ exports.updateUser = async (req, res, next) => {
     const {
       body: { name, tgID}
     } = req;
-
-    console.log(tgID);
+    
     let token = req.headers.authorization.split(" ")[1];
     const tokenUser = jwt.verify(token, process.env.ACCESS_SECRET);
     const user = await User.findById(tokenUser._id);

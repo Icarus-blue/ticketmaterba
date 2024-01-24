@@ -7,7 +7,7 @@ const router = express.Router()
 
 
 router.get('/events', protect, async (req, res, next) => {
-    try {        
+    try {
         const events = await EventModel.find({ user: req.user._id })
         res.status(200).json(events)
     } catch (err) {
@@ -16,7 +16,7 @@ router.get('/events', protect, async (req, res, next) => {
     }
 })
 
-async function getDocumentsAddedThreeDaysAgo() {
+async function getDocumentsAddedThreeDaysAgo(userid) {
     try {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -24,7 +24,8 @@ async function getDocumentsAddedThreeDaysAgo() {
         const result = await LiveDropModel.find({
             time: {
                 $gte: threeDaysAgo.toISOString(),
-            }
+            },
+            user : userid
         });
 
         return result
@@ -35,7 +36,9 @@ async function getDocumentsAddedThreeDaysAgo() {
 
 router.get("/live-drops", async (req, res, next) => {
     try {
-        const liveDrops = await getDocumentsAddedThreeDaysAgo()
+        let token = req.headers.authorization.split(" ")[1];
+        const tokenUser = jwt.verify(token, process.env.ACCESS_SECRET);        
+        const liveDrops = await getDocumentsAddedThreeDaysAgo(tokenUser._id)
         if (!liveDrops) throw new Error()
         res.status(200).json({ status: true, liveDrops })
     } catch (err) {
