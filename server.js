@@ -6,7 +6,6 @@ const errorHandler = require("./middleware/error");
 const session = require("express-session");
 const connectDB = require("./config/db");
 const axios = require('axios')
-// const { Telegraf } = require('telegraf')
 const dotenv = require('dotenv')
 const cheerio = require('cheerio');
 const request = require("request");
@@ -21,9 +20,6 @@ const Events = require("./models/Events");
 const LiveDrop = require("./models/LiveDrop");
 dotenv.config()
 
-// const bot = new Telegraf(process.env.TEL_BOT_TOKEN);
-
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -35,8 +31,6 @@ app.use(
     cookie: { secure: true },
   })
 );
-
-
 
 app.get("/", (req, res, next) => {
   res.send("server is running!");
@@ -56,29 +50,6 @@ serve.listen(PORT || 5000, async () => {
   console.log(`server is fire on ${PORT}`)
   await connectDB();
 })
-
-// bot.command('start', async context => {
-//   try {
-//     context.reply("Enter your email you signed up with event management system")
-//     bot.on('text', async ctx => {
-//       try {
-//         const email = ctx.message.text
-//         let user = await User.findOne({ email })
-//         if (!user) { ctx.reply("User not found. Create account first") }
-//         else {
-//           await User.findOneAndUpdate({ email }, { chatId: context.chat.id, userId: context.from.id })
-//           ctx.reply("Your account has been updated. You will now start receiving notifications")
-//         }
-//       } catch (error) {
-//         console.log("error creatint ids", error.message)
-//       }
-//     })
-//   } catch (err) {
-//     console.log('error starting bot', err.message)
-//   }
-// })
-
-// bot.launch()
 
 app.get('/watch', protect, async (req, res, next) => {
   const url = req.query?.url
@@ -169,10 +140,6 @@ app.get('/watch', protect, async (req, res, next) => {
 
         new EventModel(eventInfoToSave).save()
 
-        const toSend = `Drop available for ${url}: \n\n\t\t Date to Open: ${result.eventDate} \n\n\t\t sales:\n\n\t\t\t\t`
-
-        bot.telegram.sendMessage(req.user.chatId, toSend)
-
         return res.status(200).json({
           status: true,
           message: "Event watched! A message was sent to you through the bot.",
@@ -187,27 +154,9 @@ app.get('/watch', protect, async (req, res, next) => {
     .catch(error => {
       console.error(error);
     });
-
-
-  // const result = await  watchEvent(url, req.user) 
-
-
-
+    
 })
 
-const watchEvent = async (eventUrl, user) => {
-  try {
-
-  } catch (err) {
-    console.log('error scraping: ', err.message)
-    return false
-  } finally {
-
-  }
-
-}
-
-module.exports = { watchEvent }
 
 
 
