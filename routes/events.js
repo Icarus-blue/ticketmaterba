@@ -2,7 +2,7 @@ const express = require('express')
 const { watchEvent } = require('../server')
 const { protect } = require('../middleware/auth')
 const EventModel = require('../models/Events')
-
+const LiveDropModel = require('../models/LiveDrop')
 const router = express.Router()
 
 
@@ -21,7 +21,7 @@ async function getDocumentsAddedThreeDaysAgo() {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const result = await EventModel.find({
+        const result = await LiveDropModel.find({
             createdAt: {
                 $gte: threeDaysAgo.toISOString(),
             }
@@ -106,7 +106,7 @@ router.post('/delete-watch', protect, async (req, res, next) => {
 
 router.get('/events/:id', async (req, res, next) => {
     try {
-        const event = await EventModel.findById(req.params.id)
+        const event = await LiveDropModel.findById(req.params.id)
         if (!event) return res.status(404).json({ status: false, message: 'event not found' })
         res.status(200).json({
             status: true,
@@ -120,10 +120,10 @@ router.get('/events/:id', async (req, res, next) => {
 
 router.put('/events/:id', async (req, res, next) => {
     try {
-        let event = await EventModel.findById(req.params.id)
+        let event = await LiveDropModel.findById(req.params.id)
         if (!event) return res.status(404).json({ status: false, message: 'event not found' })
 
-        event = await EventModel.findOneAndUpdate(event._id, { ...req.body })
+        event = await LiveDropModel.findOneAndUpdate(event._id, { ...req.body })
         res.status(200).json({
             status: true,
             message: 'updated',

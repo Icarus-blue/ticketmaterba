@@ -6,7 +6,7 @@ const errorHandler = require("./middleware/error");
 const session = require("express-session");
 const connectDB = require("./config/db");
 const axios = require('axios')
-const { Telegraf } = require('telegraf')
+// const { Telegraf } = require('telegraf')
 const dotenv = require('dotenv')
 const cheerio = require('cheerio');
 const request = require("request");
@@ -17,10 +17,11 @@ const {
 } = require('./config/app.config')
 const cors = require("cors");
 const User = require("./models/User");
-
+const Events = require("./models/Events");
+const LiveDrop = require("./models/LiveDrop");
 dotenv.config()
 
-const bot = new Telegraf(process.env.TEL_BOT_TOKEN);
+// const bot = new Telegraf(process.env.TEL_BOT_TOKEN);
 
 
 app.use(cors());
@@ -56,28 +57,28 @@ serve.listen(PORT || 5000, async () => {
   await connectDB();
 })
 
-bot.command('start', async context => {
-  try {
-    context.reply("Enter your email you signed up with event management system")
-    bot.on('text', async ctx => {
-      try {
-        const email = ctx.message.text
-        let user = await User.findOne({ email })
-        if (!user) { ctx.reply("User not found. Create account first") }
-        else {
-          await User.findOneAndUpdate({ email }, { chatId: context.chat.id, userId: context.from.id })
-          ctx.reply("Your account has been updated. You will now start receiving notifications")
-        }
-      } catch (error) {
-        console.log("error creatint ids", error.message)
-      }
-    })
-  } catch (err) {
-    console.log('error starting bot', err.message)
-  }
-})
+// bot.command('start', async context => {
+//   try {
+//     context.reply("Enter your email you signed up with event management system")
+//     bot.on('text', async ctx => {
+//       try {
+//         const email = ctx.message.text
+//         let user = await User.findOne({ email })
+//         if (!user) { ctx.reply("User not found. Create account first") }
+//         else {
+//           await User.findOneAndUpdate({ email }, { chatId: context.chat.id, userId: context.from.id })
+//           ctx.reply("Your account has been updated. You will now start receiving notifications")
+//         }
+//       } catch (error) {
+//         console.log("error creatint ids", error.message)
+//       }
+//     })
+//   } catch (err) {
+//     console.log('error starting bot', err.message)
+//   }
+// })
 
-bot.launch()
+// bot.launch()
 
 app.get('/watch', protect, async (req, res, next) => {
   const url = req.query?.url
@@ -152,7 +153,7 @@ app.get('/watch', protect, async (req, res, next) => {
         priceArr: priceArr
       }
 
-      if (result) {
+      if (result.eventName != '' && result.eventDate != '' && result.eventPlace!='' ) {
 
         const eventInfoToSave = {
           name: result.eventName,
@@ -197,7 +198,6 @@ app.get('/watch', protect, async (req, res, next) => {
 const watchEvent = async (eventUrl, user) => {
   try {
 
-
   } catch (err) {
     console.log('error scraping: ', err.message)
     return false
@@ -206,7 +206,6 @@ const watchEvent = async (eventUrl, user) => {
   }
 
 }
-
 
 module.exports = { watchEvent }
 
