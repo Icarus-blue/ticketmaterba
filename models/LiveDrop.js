@@ -11,7 +11,8 @@ const LiveDropSchema = new mongoose.Schema({
     section : String,
     row : String, 
     time : Date
-}
+},
+    { timestamps: true }
 ) 
 
 
