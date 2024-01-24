@@ -7,8 +7,10 @@ const ErrorResponse = require("../utils/errorResponse");
 exports.updateUser = async (req, res, next) => {
   try {
     const {
-      body: { fullName, email, location, role, bio }
+      body: { name, tgID}
     } = req;
+
+    console.log(tgID);
     let token = req.headers.authorization.split(" ")[1];
     const tokenUser = jwt.verify(token, process.env.ACCESS_SECRET);
     const user = await User.findById(tokenUser._id);
@@ -18,11 +20,8 @@ exports.updateUser = async (req, res, next) => {
       message: 'there is no user!'
     })
 
-    user.fullName = fullName;
-    user.email = email;
-    user.location = location;
-    user.role = role;
-    user.bio = bio;
+    user.fullName = name;
+    user.chatId = tgID;
 
     if (req.file) {
       user.avatar.data = req.file.buffer;
