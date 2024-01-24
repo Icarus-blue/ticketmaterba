@@ -11,6 +11,8 @@ const LiveDropSchema = new mongoose.Schema({
     section : String,
     row : String,    
     time: String,   
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
 },
     { timestamps: true }
 ) 
