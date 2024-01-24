@@ -81,30 +81,34 @@ exports.loginGoogle = async (req, res, next) => {
 // @desc    Register user
 exports.register = async (req, res, next) => {
   try {
+    const { email } = req.body;
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists',
+      });
+    }
+
     const user = await User.create(req.body);
-
-    // sendToken(user, 200, res);
-
-    // Send the activation link
-
-    // Activation Token Gen and add to database hashed (private) version of token
-    // const otp = user.getOtp();
 
     const profile = await Profile.create({});
     profile.user = user._id;
     await profile.save();
+
     user.profile = profile._id;
     await user.save();
 
     res.status(200).json({
       success: true,
-      data: "Register Successfully!",
+      message: 'Registered successfully!',
     });
   } catch (err) {
     next(err);
   }
 };
-
 exports.registerGoogle = async (req, res, next) => {
   try {
     const user = await User.create(req.body);
