@@ -9,10 +9,7 @@ const LiveDropSchema = new mongoose.Schema({
     criteria : String,
     droptime : String,
     section : String,
-    row : String,    
-    time: String,   
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+    row : String,  
 },
     { timestamps: true }
 ) 

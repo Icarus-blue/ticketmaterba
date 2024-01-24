@@ -22,7 +22,7 @@ async function getDocumentsAddedThreeDaysAgo() {
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
         const result = await LiveDropModel.find({
-            createdAt: {
+            time: {
                 $gte: threeDaysAgo.toISOString(),
             }
         });
