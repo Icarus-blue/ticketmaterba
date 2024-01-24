@@ -9,9 +9,9 @@ const LiveDropSchema = new mongoose.Schema({
     criteria : String,
     droptime : String,
     section : String,
-    row : String,  
-},
-    { timestamps: true }
+    row : String, 
+    time : Date
+}
 ) 
 
 
