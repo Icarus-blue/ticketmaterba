@@ -50,7 +50,7 @@ serve.listen(PORT || 5000, async () => {
   console.log(`server is fire on ${PORT}`)
   await connectDB();
 })
-
+  
 app.get('/watch', protect, async (req, res, next) => {
   const url = req.query?.url
 

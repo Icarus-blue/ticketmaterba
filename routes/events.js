@@ -16,6 +16,17 @@ router.get('/events', protect, async (req, res, next) => {
     }
 })
 
+router.post('/event/delete/:id', protect, async (req, res, next) => {
+    try {
+        const {id} = req.params;        
+        const result = await EventModel.deleteOne({ _id: id })
+        res.status(200).json(result)
+    } catch (err) {
+        console.log(err.message)
+        res.status(500).json({ message: "failed. Try again" })
+    }
+})
+
 async function getDocumentsAddedThreeDaysAgo(userid) {
     try {
         const threeDaysAgo = new Date();
